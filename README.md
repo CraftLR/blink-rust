@@ -63,7 +63,13 @@ Dans notre cas, il suffira simplement d'ajouter la bibliothèque [`stm32l4xx_hal
 
 ## Préparation de l'environnement
 
-L'installation des outils est assez simple tant que vous êtes sous Linux ou OSX. Sous Windows, il semble que ce soit moins évident donc il faudra probablement chercher un peu plus.
+L'installation des outils est assez simple tant que vous êtes sous Linux ou OSX. Sous Windows, il semble que ce soit moins évident donc il faudra probablement chercher un peu plus. La première chose à faire si vous êtes dans ce cas de figure est d'installer [WSL](https://learn.microsoft.com/fr-fr/windows/wsl/install). Une fois WSL installé sur votre poste, vous pourrez utiliser les mêmes commandes que sous linux à condition d'avoir exécuté les commandes suivantes au préalable :
+
+```sh
+sudo apt update
+sudo apt upgrade
+sudo apt install build-essential pkg-config libssl-dev libudev-dev gdb-multiarch
+```
 
 Sous Linux et OSX, vous pouvez vous en sortir en ayant simplement une installation Rust fonctionnelle. Si ce n'est pas le cas, installer `rustup` peut se faire en une seule commande :
 
@@ -73,7 +79,7 @@ curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 
 Une fois `rustup` installé, assurez-vous d'avoir la version la plus récente de Rust. Si ce n'est pas le cas, vous risqueriez de devoir recompiler les outils plusieurs fois.
 
-En plus de cela, vous devez avoir la bonne cible `thumbv7em-none-eabihf` et quelques composants cargo additionnels qui pourront être installé avec les commandes suivantes :
+En plus de cela, vous devez avoir la bonne cible `thumbv7em-none-eabihf` et quelques composants cargo additionnels qui pourront être installés avec les commandes suivantes :
 
 ```sh
 rustup update
@@ -84,7 +90,7 @@ cargo install cargo-binutils probe-rs-debugger cargo-embed cargo-flash cargo-exp
 
 Sous Linux, il est possible que vous ayez besoin d'ajouter quelques dépendances pour que ces commandes puissent aller jusqu'au bout. Par exemple, sur une Ubuntu, vous devez installer les paquets `gdb-multiarch`, `libudev`, `libudev-dev`, `libssl-dev` et `pkg-config`.
 
-Grâce à probe.rs (installé avec `cargo-embed`), nous avons tout ce dont nous avons besoin pour commencer utiliser notre carte et y téléverser un programme.
+Grâce à probe.rs (installé avec `cargo-embed`), nous avons tout ce dont nous avons besoin pour commencer avec notre carte et y téléverser un programme.
 
 ## Première compilation et vérification de l'installation
 
@@ -99,7 +105,7 @@ cargo flash --chip STM32L475VGTx
 
 La première compile simplement le projet et la seconde va flasher le programme dans le microcontrôleur à travers la sonde de débogage.
 
-Une fois la carte programmée, les deux LEDs devraient clignoter alternativement avec un délais de 1s.
+Une fois la carte programmée, les deux LEDs devraient clignoter alternativement avec un délai de 1s.
 
 ![blink](/assets/blink.gif)
 
