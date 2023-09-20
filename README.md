@@ -63,64 +63,52 @@ Dans notre cas, il suffira simplement d'ajouter la bibliothèque [`stm32l4xx_hal
 
 ## Préparation de l'environnement
 
-L'installation des outils est assez simple tant que vous êtes sous Linux ou OSX. 
+L'installation des outils est relativement simple tant mais quelques particularités de chaque OS sont à prendre en compte.
 
-Sous Windows, il semble que ce soit moins évident donc il faudra probablement chercher un peu plus. La première chose à faire si vous êtes dans ce cas de figure est d'installer [WSL](https://learn.microsoft.com/fr-fr/windows/wsl/install) en tapant dans un terminal PowerShell les commandes suivantes : 
+### Préparation de l'installation sous Windows
 
-```sh
-wsl --install
-winget install --interactive --exact dorssel.usbipd-win
-```
+Sous Windows, la procédure d'installation va nécéssiter d'installer rustup manuellement en se rendant sur la page <https://rustup.rs/> et en téléchargeant le fichier [`rustup-init.exe`](https://win.rustup.rs/x86_64). Le processus d'installation est assez simple mais il va nécessiter de télécharger Visual Studio ce qui demande un peu de temps et d'espace disque. Une fois l'installation terminée, réouvrez votre terminal pour pouvoir lancer `rustup`. 
 
-Une fois WSL installé sur votre poste, vous pourrez utiliser les mêmes commandes que sous linux à condition d'avoir exécuté les commandes suivantes dans un terminal Ubuntu au préalable :
+### Préparation de l'installation sous Linux
+L'installation des outils de déboguage embarqué demande l'installation du plusieurs paquets. Si vous êtes sur une distribution basée sur Debian, tapez les commandes suivantes :
 
 ```sh
 sudo apt update
 sudo apt upgrade
-sudo apt install -y build-essential pkg-config
-sudo apt install -y libusb-1.0-0-dev libftdi1-dev libudev-dev libssl-dev
-sudo apt install -y gdb-multiarch
-sudo apt install -y linux-tools-generic hwdata
-sudo update-alternatives --install /usr/local/bin/usbip usbip /usr/lib/linux-tools/*-generic/usbip 20
+sudo apt install -y build-essential pkg-config libusb-1.0-0-dev libftdi1-dev libudev-dev libssl-dev gdb-multiarch
+```
+
+Pour rendre la carte de développement accessible à votre utilisateur courant, il est nécéssaire d'ajouter des règles udev pour que les droits soient correctement attribué :
+
+```sh
 sudo usermod -a -G plugdev $USER
-```
-Pour rendre la carte de développement accessible depuis WSL, il faudra demander au periphérique USB d'être automatiquement attaché à WSL en tappant dans PowerShell la commande suivante :
-
-```sh
- usbipd wsl attach -a -i 0d28:0204
-```
-Une fois le périphérique attaché, il faut que votre utilisateur WSL y ait accès. Pour ce faire, il faut mettre à jour les règles udev de la sorte : 
-
-```sh
 curl -fsSL https://raw.githubusercontent.com/platformio/platformio-core/develop/platformio/assets/system/99-platformio-udev.rules | sudo tee /etc/udev/rules.d/99-platformio-udev.rules
-sudo service udev start
-echo "wsl.exe -u root service udev status || wsl.exe -u root service udev start"||tee –a ~/.bash_profile 
 sudo udevadm control --reload-rules
 sudo udevadm trigger
 ```
 
-Une fois cela fait, fermez et réouvrez votre terminal WSL et continuez l'installation.
+Ensuite, déconnectez vous de votre session utilisateur pour prendre en compte l'ajout dans le groupe `plugdev`.
 
-Sous Linux et OSX, vous pouvez vous en sortir en ayant simplement une installation Rust fonctionnelle. Si ce n'est pas le cas, installer `rustup` peut se faire en une seule commande :
+Pour installer `rustup` il suffit d'éxécuter la commande suivante :
 
 ```sh
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 ```
 
-Une fois `rustup` installé, assurez-vous d'avoir la version la plus récente de Rust. Si ce n'est pas le cas, vous risqueriez de devoir recompiler les outils plusieurs fois.
+### Installation et mise en place de la chaine de compilation croisée
+Une fois `rustup` installé, il faut s'assurer d'avoir la version la plus récente de Rust. Si ce n'est pas le cas, vous risqueriez de devoir recompiler les outils plusieurs fois et c'est une étape très longue.
 
-En plus de cela, vous devez avoir la bonne cible `thumbv7em-none-eabihf` et quelques composants cargo additionnels qui pourront être installés avec les commandes suivantes :
+En plus de cela, vous devez avoir la bonne cible `thumbv7em-none-eabihf` pour compiler sur un microcontroleur ARM et quelques composants cargo additionnels qui pourront être installés avec les commandes suivantes :
 
 ```sh
 rustup update
 rustup component add llvm-tools-preview
 rustup target add thumbv7em-none-eabihf
-cargo install cargo-binutils probe-rs-debugger cargo-embed cargo-flash cargo-generate
+cargo install cargo install probe-rs --features cli
+cargo install cargo-binutils cargo-generate
 ```
 
-Sous Linux, il est possible que vous ayez besoin d'ajouter quelques dépendances pour que ces commandes puissent aller jusqu'au bout. Par exemple, sur une Ubuntu, vous devez installer les paquets `gdb-multiarch`, `libudev`, `libudev-dev`, `libssl-dev` et `pkg-config`.
-
-Grâce à probe.rs (installé avec `cargo-embed`), nous avons tout ce dont nous avons besoin pour commencer avec notre carte et y téléverser un programme.
+Grâce à [probe.rs](https://probe.rs/), nous avons tout ce dont nous avons besoin pour commencer avec notre carte et y téléverser un programme.
 
 ## Première compilation et vérification de l'installation
 
