@@ -77,8 +77,10 @@ Une fois WSL installé sur votre poste, vous pourrez utiliser les mêmes command
 ```sh
 sudo apt update
 sudo apt upgrade
-sudo apt install build-essential pkg-config libssl-dev libudev-dev gdb-multiarch
-sudo apt install linux-tools-generic hwdata
+sudo apt install -y build-essential pkg-config
+sudo apt install -y libusb-1.0-0-dev libftdi1-dev libudev-dev libssl-dev
+sudo apt install -y gdb-multiarch
+sudo apt install -y linux-tools-generic hwdata
 sudo update-alternatives --install /usr/local/bin/usbip usbip /usr/lib/linux-tools/*-generic/usbip 20
 sudo usermod -a -G plugdev $USER
 ```
@@ -92,6 +94,7 @@ Une fois le périphérique attaché, il faut que votre utilisateur WSL y ait acc
 ```sh
 curl -fsSL https://raw.githubusercontent.com/platformio/platformio-core/develop/platformio/assets/system/99-platformio-udev.rules | sudo tee /etc/udev/rules.d/99-platformio-udev.rules
 sudo service udev start
+echo "wsl.exe -u root service udev status || wsl.exe -u root service udev start"||tee –a ~/.bash_profile 
 sudo udevadm control --reload-rules
 sudo udevadm trigger
 ```
