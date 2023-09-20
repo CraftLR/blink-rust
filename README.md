@@ -400,3 +400,157 @@ Le fichier `.vscode/extensions.json` contient déjà la configuration des extens
 Une fois l'installation complète, vous devriez pouvoir tester et déboguer très facilement :
 
 ![Debug](/assets/vscode_debug.gif)
+
+## Exercice 1 : Cabler une LED physique
+Dans l'exemple précédent, les LED internes de la carte ont été utilisée. Dans cet exercice, vous devez modifier l'exemple pour piloter 4 LEDs que vous cablerez sur les broches `D4`, `D5`, `D6`, `D7`. N'oubliez pas de bien regarder le sens de la LED et à bien ajouter une résistance pour limiter l'intensité.
+
+Une fois correctement cablées, modifiez le programme précédent pour éclairer succéssivement chacune d'elle. Vous pouvez ensuite le modifier pour avoir [un chenillard à la K2000](https://www.youtube.com/watch?v=bD41qi9Ybt4).
+
+## Exercice 2 : Gérer un intérrupteur simplement
+La gestion d'un interrupteur peut se faire de plusieurs manière. La plus simple est de lire régulièrement la valeur sur l'entrée dans la boucle principale et de réagir en fonction de l'état au moment de la lecture.
+
+Cette approche simple est très efficace tant que la boucle principale est rapide. En créant les objets associés au bouton poussoir USER situé sur la carte, écrire un programme qui lancera le chenillard précédent quand le bouton est préssé. Le bouton est sur la broche `PC13`, il faudra dont bien penser à configurer `GPIOC` préalablement.
+
+## Exercice 3 : Gérer un interrupteur avec des interruptions
+La gestion d'un interrupteur de manière synchrone dans la boucle principale peut vite devenir problématique en terme de réactivité du programme. Pour éviter ce problème, il faut utiliser des mécanismes asynchrones internes aux microcontroleurs. Dans cet exercice, vous allez découvrir comment le mettre en place et surtout voir que rapidement ça va devenir plus difficile.
+
+### Contexte
+Dans un système embarqué, une interruption est un mécanisme qui permet au processeur de mettre en pause l'exécution du programme principal pour exécuter une tâche spécifique. Cette tâche est généralement courte et doit être exécutée rapidement.
+
+### Détails du Code
+- `Mutex<RefCell<Option<Button>>>` : Utilisé pour le partage sécurisé du bouton-poussoir entre différents contextes d'interruption.
+
+- `fn EXTI15_10()` : La fonction d'interruption qui est appelée lorsque le bouton est appuyé.
+
+### Étapes
+- Initialisation
+    - Importez les bibliothèques nécessaires.
+    - Configurez le système d'horloge et les GPIO.
+
+- Configuration du Bouton
+    - Transformez le pin PC13 en entrée avec pull-up.
+    - Configurez-le pour déclencher une interruption sur le front montant.
+
+- Configuration de la LED
+    - Transformez le pin PC9 en sortie pour contrôler une LED.
+
+- Enregistrement des Périphériques dans le Mutex
+    - Utilisez cortex_m::interrupt::free pour enregistrer le bouton et la LED dans les Mutex globaux.
+
+- Fonction d'Interruption
+    - Écrivez une fonction d'interruption qui inverse l'état de la LED lorsque le bouton est appuyé.
+
+- Boucle Principale
+    - Implémentez une boucle infinie qui fait clignoter d'autres LEDs.
+
+Vous devez suivre ces étapes pour écrire votre code final. Analysez chaque segment pour comprendre son fonctionnement. Modifiez le code fourni pour déclancher le lancement du chenillard quand le bouton est actionné.
+
+```rust
+#![no_std]
+#![no_main]
+
+use core::{cell::RefCell, panic::PanicInfo};
+use cortex_m::interrupt::Mutex;
+use cortex_m_rt::{entry, exception, ExceptionFrame};
+use stm32l4xx_hal::{
+  delay::Delay,
+  gpio::{gpioc::PC13, gpioc::PC9, Edge, Input, Output, PullUp, PushPull},
+  interrupt,
+  prelude::*,
+};
+
+use rtt_target::{rprintln, rtt_init_print};
+
+type Button = PC13<Input<PullUp>>;
+static USER_BUTTON: Mutex<RefCell<Option<Button>>> = Mutex::new(RefCell::new(None));
+
+type LedPin = PC9<Output<PushPull>>;
+static LED3: Mutex<RefCell<Option<LedPin>>> = Mutex::new(RefCell::new(None));
+
+#[entry]
+fn main() -> ! {
+  rtt_init_print!();
+
+  let core = cortex_m::Peripherals::take().unwrap();
+  let mut device = stm32l4xx_hal::stm32::Peripherals::take().unwrap();
+
+  let mut flash = device.FLASH.constrain();
+  let mut rcc = device.RCC.constrain();
+  let mut pwr = device.PWR.constrain(&mut rcc.apb1r1);
+
+  let clocks = rcc.cfgr.sysclk(64.MHz()).pclk1(48.MHz()).freeze(&mut flash.acr, &mut pwr);
+
+  let mut gpioa = device.GPIOA.split(&mut rcc.ahb2);
+  let mut gpiob = device.GPIOB.split(&mut rcc.ahb2);
+  let mut gpioc = device.GPIOC.split(&mut rcc.ahb2);
+
+  let mut led1 = gpioa.pa5.into_push_pull_output(&mut gpioa.moder, &mut gpioa.otyper);
+
+  let mut led2 = gpiob.pb14.into_push_pull_output(&mut gpiob.moder, &mut gpiob.otyper);
+
+  let mut led3 = gpioc.pc9.into_push_pull_output(&mut gpioc.moder, &mut gpioc.otyper);
+  led3.set_low();
+
+  let mut button = gpioc.pc13.into_pull_up_input(&mut gpioc.moder, &mut gpioc.pupdr);
+
+  let mut timer = Delay::new(core.SYST, clocks);
+
+  button.make_interrupt_source(&mut device.SYSCFG, &mut rcc.apb2);
+  button.enable_interrupt(&mut device.EXTI);
+  button.trigger_on_edge(&mut device.EXTI, Edge::Rising);
+
+  cortex_m::interrupt::free(|cs| {
+    USER_BUTTON.borrow(cs).replace(Some(button));
+    LED3.borrow(cs).replace(Some(led3));
+  });
+
+  unsafe {
+    cortex_m::peripheral::NVIC::unmask(stm32l4xx_hal::interrupt::EXTI15_10);
+  }
+
+  rprintln!("Hello, world!");
+
+  led1.set_low();
+  led2.set_high();
+
+  loop {
+    led1.toggle();
+    led2.toggle();
+    rprintln!("toggle leds");
+    timer.delay_ms(1000_u32);
+  }
+}
+
+#[panic_handler]
+fn panic(panic: &PanicInfo<'_>) -> ! {
+  rprintln!("panic : {}", panic);
+  loop {}
+}
+
+// define the hard fault handler
+#[exception]
+unsafe fn HardFault(ef: &ExceptionFrame) -> ! {
+  panic!("{:#?}", ef);
+}
+
+// define the default exception handler
+#[exception]
+unsafe fn DefaultHandler(irqn: i16) -> ! {
+  panic!("unhandled exception (IRQn={irqn})");
+}
+
+#[interrupt]
+fn EXTI15_10() {
+  cortex_m::interrupt::free(|cs| {
+    USER_BUTTON.borrow(cs).borrow_mut().as_mut().unwrap().clear_interrupt_pending_bit();
+    LED3.borrow(cs).borrow_mut().as_mut().unwrap().toggle();
+  });
+  rprintln!("button pushed !");
+}
+```
+
+## Exercice 4 : Refactoring ! 
+Le code des exercices précédents est assez difficile à comprendre car la fonction `main` s'occupe actuellement de tout faire. Pour améliorer la qualité de code, essayez de refactoriser les différentes fonctionnalités pour avoir un code plus expressif, moins redondant et réutilisable. L'introduction de structures ou de fonctions avec des noms bien choisis doit être suffisant au vu de la complexité du code actuelle. 
+
+
+
