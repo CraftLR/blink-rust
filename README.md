@@ -63,11 +63,15 @@ Dans notre cas, il suffira simplement d'ajouter la bibliothèque [`stm32l4xx_hal
 
 ## Préparation de l'environnement
 
-L'installation des outils est assez simple tant que vous êtes sous Linux ou OSX. Sous Windows, il semble que ce soit moins évident donc il faudra probablement chercher un peu plus. La première chose à faire si vous êtes dans ce cas de figure est d'installer [WSL](https://learn.microsoft.com/fr-fr/windows/wsl/install) en tapant dans un terminal PowerShell les commandes suivantes : 
+L'installation des outils est assez simple tant que vous êtes sous Linux ou OSX. 
+
+Sous Windows, il semble que ce soit moins évident donc il faudra probablement chercher un peu plus. La première chose à faire si vous êtes dans ce cas de figure est d'installer [WSL](https://learn.microsoft.com/fr-fr/windows/wsl/install) en tapant dans un terminal PowerShell les commandes suivantes : 
+
 ```sh
 wsl --install
 winget install --interactive --exact dorssel.usbipd-win
 ```
+
 Une fois WSL installé sur votre poste, vous pourrez utiliser les mêmes commandes que sous linux à condition d'avoir exécuté les commandes suivantes dans un terminal Ubuntu au préalable :
 
 ```sh
@@ -76,7 +80,23 @@ sudo apt upgrade
 sudo apt install build-essential pkg-config libssl-dev libudev-dev gdb-multiarch
 sudo apt install linux-tools-generic hwdata
 sudo update-alternatives --install /usr/local/bin/usbip usbip /usr/lib/linux-tools/*-generic/usbip 20
+sudo usermod -a -G plugdev $USER
 ```
+Pour rendre la carte de développement accessible depuis WSL, il faudra demander au periphérique USB d'être automatiquement attaché à WSL en tappant dans PowerShell la commande suivante :
+
+```sh
+ usbipd wsl attach -a -i 0d28:0204
+```
+Une fois le périphérique attaché, il faut que votre utilisateur WSL y ait accès. Pour ce faire, il faut mettre à jour les règles udev de la sorte : 
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/platformio/platformio-core/develop/platformio/assets/system/99-platformio-udev.rules | sudo tee /etc/udev/rules.d/99-platformio-udev.rules
+sudo service udev start
+sudo udevadm control --reload-rules
+sudo udevadm trigger
+```
+
+Une fois cela fait, fermez et réouvrez votre terminal WSL et continuez l'installation.
 
 Sous Linux et OSX, vous pouvez vous en sortir en ayant simplement une installation Rust fonctionnelle. Si ce n'est pas le cas, installer `rustup` peut se faire en une seule commande :
 
@@ -92,7 +112,7 @@ En plus de cela, vous devez avoir la bonne cible `thumbv7em-none-eabihf` et quel
 rustup update
 rustup component add llvm-tools-preview
 rustup target add thumbv7em-none-eabihf
-cargo install cargo-binutils probe-rs-debugger cargo-embed cargo-flash cargo-expand cargo-generate
+cargo install cargo-binutils probe-rs-debugger cargo-embed cargo-flash cargo-generate
 ```
 
 Sous Linux, il est possible que vous ayez besoin d'ajouter quelques dépendances pour que ces commandes puissent aller jusqu'au bout. Par exemple, sur une Ubuntu, vous devez installer les paquets `gdb-multiarch`, `libudev`, `libudev-dev`, `libssl-dev` et `pkg-config`.
