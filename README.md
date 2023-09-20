@@ -63,12 +63,19 @@ Dans notre cas, il suffira simplement d'ajouter la bibliothèque [`stm32l4xx_hal
 
 ## Préparation de l'environnement
 
-L'installation des outils est assez simple tant que vous êtes sous Linux ou OSX. Sous Windows, il semble que ce soit moins évident donc il faudra probablement chercher un peu plus. La première chose à faire si vous êtes dans ce cas de figure est d'installer [WSL](https://learn.microsoft.com/fr-fr/windows/wsl/install). Une fois WSL installé sur votre poste, vous pourrez utiliser les mêmes commandes que sous linux à condition d'avoir exécuté les commandes suivantes au préalable :
+L'installation des outils est assez simple tant que vous êtes sous Linux ou OSX. Sous Windows, il semble que ce soit moins évident donc il faudra probablement chercher un peu plus. La première chose à faire si vous êtes dans ce cas de figure est d'installer [WSL](https://learn.microsoft.com/fr-fr/windows/wsl/install) en tapant dans un terminal PowerShell les commandes suivantes : 
+```sh
+wsl --install
+winget install --interactive --exact dorssel.usbipd-win
+```
+Une fois WSL installé sur votre poste, vous pourrez utiliser les mêmes commandes que sous linux à condition d'avoir exécuté les commandes suivantes dans un terminal Ubuntu au préalable :
 
 ```sh
 sudo apt update
 sudo apt upgrade
 sudo apt install build-essential pkg-config libssl-dev libudev-dev gdb-multiarch
+sudo apt install linux-tools-generic hwdata
+sudo update-alternatives --install /usr/local/bin/usbip usbip /usr/lib/linux-tools/*-generic/usbip 20
 ```
 
 Sous Linux et OSX, vous pouvez vous en sortir en ayant simplement une installation Rust fonctionnelle. Si ce n'est pas le cas, installer `rustup` peut se faire en une seule commande :
