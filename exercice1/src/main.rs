@@ -1,16 +1,14 @@
 #![no_std]
 #![no_main]
 
-use core::panic::PanicInfo;
 use cortex_m_rt::entry;
 use stm32l4xx_hal::{delay::Delay, prelude::*};
 
-use rtt_target::{rprintln, rtt_init_print};
+use defmt::*;
+use {defmt_rtt as _, panic_probe as _};
 
 #[entry]
 fn main() -> ! {
-  rtt_init_print!();
-
   let core = cortex_m::Peripherals::take().unwrap();
   let device = stm32l4xx_hal::stm32::Peripherals::take().unwrap();
 
@@ -29,7 +27,7 @@ fn main() -> ! {
 
   let mut timer = Delay::new(core.SYST, clocks);
 
-  rprintln!("Hello, world!");
+  println!("Hello, world!");
 
   led1.set_low();
   led2.set_high();
@@ -37,13 +35,7 @@ fn main() -> ! {
   loop {
     led1.toggle();
     led2.toggle();
-    rprintln!("toggle leds");
+    println!("toggle leds");
     timer.delay_ms(1000_u32);
   }
-}
-
-#[panic_handler]
-fn panic(panic: &PanicInfo<'_>) -> ! {
-  rprintln!("panic : {}", panic);
-  loop {}
 }

@@ -1,5 +1,12 @@
 {
     "cSpell.language": "en,fr",
     "rust-analyzer.cargo.target": "thumbv7em-none-eabihf",
-    "rust-analyzer.check.allTargets": false
+    "rust-analyzer.check.allTargets": false,
+    "rust-analyzer.linkedProjects": [
+        "./exercice1/Cargo.toml",
+        "./exercice2/Cargo.toml",
+        "./exercice3/Cargo.toml",
+        "./exercice4/Cargo.toml",
+        "./exercice5/Cargo.toml"
+    ]
 }
